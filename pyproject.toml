@@ -1,0 +1,41 @@
+[tool.poetry]
+name = "sunmao"
+version = "0.3.0"
+description = "A flexible subplot layout library for matplotlib with support for adding panels in all directions"
+authors = ["seqyuan <seqyuan@example.com>"]
+readme = "README.md"
+license = "MIT"
+homepage = "https://github.com/seqyuan/sunmao"
+repository = "https://github.com/seqyuan/sunmao"
+documentation = "https://sunmao.readthedocs.io"
+keywords = ["matplotlib", "visualization", "subplot", "layout", "plotting"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Visualization",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+packages = [{include = "sunmao"}]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+matplotlib = "^3.5.0"
+numpy = "^1.21.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.0.0"
+black = "^22.0.0"
+flake8 = "^4.0.0"
+mypy = "^0.950"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
