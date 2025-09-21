@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "sunmao"
-version = "0.3.0"
+version = "0.3.1"
 description = "A flexible subplot layout library for matplotlib with support for adding panels in all directions"
 authors = ["seqyuan <seqyuan@example.com>"]
 readme = "README.md"

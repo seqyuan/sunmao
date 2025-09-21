@@ -3,6 +3,8 @@ name: CI/CD Pipeline
 on:
   push:
     branches: [ main, develop ]
+    tags:
+      - 'v*'  # Trigger on version tags like v1.0.0
   pull_request:
     branches: [ main ]
   release:
@@ -56,7 +58,7 @@ jobs:
   build:
     needs: test
     runs-on: ubuntu-latest
-    if: github.event_name == 'release'
+    if: github.event_name == 'release' || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v'))
     
     steps:
     - uses: actions/checkout@v3
@@ -79,8 +81,12 @@ jobs:
     - name: Build package
       run: poetry build
     
+    - name: Check package
+      run: poetry run twine check dist/*
+    
     - name: Publish to PyPI
-      env:
-        TWINE_USERNAME: __token__
-        TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-      run: poetry publish
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        user: __token__
+        password: ${{ secrets.PYPI_API_TOKEN }}
+        skip-existing: true

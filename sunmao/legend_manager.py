@@ -1,9 +1,6 @@
 """
 Sunmao 统一 Legend 管理架构设计
 
-参考 Marsilea 和 PyComplexHeatmap 的 legend 布局处理方式，
-为 sunmao 设计一个统一的 legend 管理架构。
-
 设计理念：
 1. 统一管理：可以在整个图形级别统一管理所有 legend
 2. 灵活布局：每个子图可以单独在图周围布局 legend
