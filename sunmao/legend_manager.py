@@ -11,8 +11,11 @@ Sunmao 统一 Legend 管理架构设计
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from matplotlib.legend import Legend
-from typing import Dict, List, Tuple, Optional, Union, Any
+from typing import Dict, List, Tuple, Optional, Union, Any, TYPE_CHECKING
 import numpy as np
+
+if TYPE_CHECKING:
+    from .mortise import mortise
 
 
 class LegendManager:
@@ -192,26 +195,26 @@ class LegendManager:
             return self.create_mixed_legends(**kwargs)
         else:
             raise ValueError(f"Unknown mode: {mode}")
-    
+
     def optimize_legend_layout(self, legend: Legend, margin: float = 0.05):
         """
         优化 legend 布局，避免遮挡
-        
+
         Args:
             legend: legend 对象
             margin: 边距
         """
         if legend is None:
             return
-            
+
         # 获取 legend 的边界框
         bbox = legend.get_window_extent()
-        
+
         # 检查是否与 mortise 重叠
         for mortise in self.mortises:
             if mortise.axes is not None:
                 mortise_bbox = mortise.axes.get_window_extent()
-                
+
                 # 如果重叠，调整 legend 位置
                 if bbox.overlaps(mortise_bbox):
                     # 简单的避让策略：移动到右上角
@@ -263,7 +266,7 @@ class LegendPosition:
 
     @classmethod
     def calculate_optimal_position(cls, mortises: List['mortise'],
-                                  legend_size: Tuple[float, float]) -> str:
+                                   legend_size: Tuple[float, float]) -> str:
         """
         计算最优 legend 位置
 
