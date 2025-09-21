@@ -7,8 +7,6 @@ four directions (top, bottom, left, right).
 """
 
 import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
-import matplotlib.patches as patches
 from matplotlib.legend import Legend
 from typing import Optional, Dict, Any, Tuple, List, Union
 import numpy as np
@@ -16,11 +14,12 @@ import numpy as np
 
 class mortise:
     """
-    A mortise that can contain a matplotlib axes and have child tenons in all directions.
-    
+    A mortise that can contain a matplotlib axes and have child tenons in all
+    directions.
+
     This class is inspired by traditional Chinese mortise-tenon joinery, where
     mortise is the main structure and tenons are the connecting pieces.
-    
+
     Attributes:
         ax (matplotlib.axes.Axes): The matplotlib axes object for this mortise
         tenons (dict): Dictionary containing child tenons in each direction
@@ -36,23 +35,28 @@ class mortise:
         # Initialize the instance
         instance.__init__(*args, **kwargs)
         # If this is a root mortise with auto_render, return (fig, mortise)
-        if instance.parent is None and instance.auto_render and hasattr(instance, '_fig'):
+        if (instance.parent is None and instance.auto_render and
+                hasattr(instance, '_fig')):
             return instance._fig, instance
         return instance
     
-    def __init__(self, width: float = 1.0, height: float = 1.0, 
-                 axoff: bool = False, cbar_pos: Optional[Tuple[float, float, float, float]] = None,
-                 auto_render: bool = True, figsize: Tuple[float, float] = (10, 8),
+    def __init__(self, width: float = 1.0, height: float = 1.0,
+                 axoff: bool = False,
+                 cbar_pos: Optional[Tuple[float, float, float, float]] = None,
+                 auto_render: bool = True,
+                 figsize: Tuple[float, float] = (10, 8),
                  **kwargs):
         """
         Initialize a mortise.
-        
+
         Args:
             width (float): Relative width of the mortise (default: 1.0)
             height (float): Relative height of the mortise (default: 1.0)
             axoff (bool): Whether to turn off axes display (default: False)
-            cbar_pos (tuple): Colorbar position as (x, y, width, height) (default: None)
-            auto_render (bool): Whether to automatically render the mortise (default: True)
+            cbar_pos (tuple): Colorbar position as (x, y, width, height)
+                (default: None)
+            auto_render (bool): Whether to automatically render the mortise
+                (default: True)
             figsize (tuple): Figure size for auto-render (default: (10, 8))
             **kwargs: Additional arguments passed to matplotlib subplot creation
         """
