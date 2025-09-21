@@ -765,48 +765,52 @@ class LegendManager:
                 handles, labels = mortise.axes.get_legend_handles_labels()
                 if handles and labels:
                     mortise_name = f'mortise_{i}'
-                    position = positions.get(mortise_name, 'upper right') if positions else 'upper right'
-                    
+                    position = (positions.get(mortise_name, 'upper right')
+                               if positions else 'upper right')
+
                     legend = mortise.axes.legend(
                         handles, labels,
                         loc=position,
                         **kwargs
                     )
                     local_legends[mortise_name] = legend
-                    
+
         return local_legends
     
     def create_mixed_legends(self, global_position: str = 'upper center',
-                           local_positions: Dict[str, str] = None,
-                           global_ncol: int = None, **kwargs) -> Tuple[Legend, Dict[str, Legend]]:
+                             local_positions: Dict[str, str] = None,
+                             global_ncol: int = None,
+                             **kwargs) -> Tuple[Legend, Dict[str, Legend]]:
         """
         创建混合模式 legend（全局 + 局部）
-        
+
         Args:
             global_position: 全局 legend 位置
             local_positions: 局部 legend 位置映射
             global_ncol: 全局 legend 列数
             **kwargs: 其他 legend 参数
-            
+
         Returns:
             tuple: (全局 legend, 局部 legend 字典)
         """
         # 创建全局 legend
-        global_legend = self.create_global_legend(global_position, global_ncol, **kwargs)
-        
+        global_legend = self.create_global_legend(global_position, global_ncol,
+                                                 **kwargs)
+
         # 创建局部 legend
         local_legends = self.create_local_legends(local_positions, **kwargs)
-        
+
         return global_legend, local_legends
     
-    def auto_layout_legends(self, mode: str = 'auto', **kwargs) -> Union[Legend, Dict[str, Legend], Tuple]:
+    def auto_layout_legends(self, mode: str = 'auto',
+                           **kwargs) -> Union[Legend, Dict[str, Legend], Tuple]:
         """
         自动布局 legend
-        
+
         Args:
             mode: 布局模式 ('global', 'local', 'mixed', 'auto')
             **kwargs: 其他参数
-            
+
         Returns:
             legend 对象或对象集合
         """
@@ -815,14 +819,14 @@ class LegendManager:
             legend_info = self.collect_legends()
             unique_count = len(legend_info['unique_labels'])
             mortise_count = len(self.mortises)
-            
+
             if unique_count <= 3 and mortise_count <= 2:
                 mode = 'global'
             elif unique_count > 6 or mortise_count > 4:
                 mode = 'local'
             else:
                 mode = 'mixed'
-        
+
         if mode == 'global':
             return self.create_global_legend(**kwargs)
         elif mode == 'local':
