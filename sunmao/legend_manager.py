@@ -11,11 +11,10 @@ Sunmao 统一 Legend 管理架构设计
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from matplotlib.legend import Legend
-from typing import Dict, List, Tuple, Optional, Union, Any, TYPE_CHECKING
+from typing import Dict, List, Tuple, Union, Any
 import numpy as np
 
-if TYPE_CHECKING:
-    from .mortise import mortise
+from .mortise_tenson import mortise
 
 
 class LegendManager:
