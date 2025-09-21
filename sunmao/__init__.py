@@ -12,8 +12,7 @@ Main classes:
 - LegendPosition: Legend position management utilities
 """
 
-from .mortise_tenson import mortise
-from .legend_manager import LegendManager, LegendPosition
+from .mortise_tenson import mortise, LegendManager, LegendPosition
 
 __version__ = "0.3.0"
 __all__ = ["mortise", "LegendManager", "LegendPosition"]
