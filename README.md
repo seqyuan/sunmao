@@ -163,3 +163,9 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
+## Acknowledgments
+
+- 🏗️ Inspired by [trackc's tenon class](https://github.com/seqyuan/trackc) for vertical stacking
+- 📊 Layout concepts influenced by [PyComplexHeatmap](https://github.com/DingWB/PyComplexHeatmap)
+- 🎨 General approach inspired by [marsilea](https://github.com/Marsilea-viz/marsilea)
+- 🔧 Release process inspired by [evapro](https://github.com/seqyuan/evapro)
