@@ -217,14 +217,14 @@ class LegendManager:
                     # 简单的避让策略：移动到右上角
                     legend.set_bbox_to_anchor((1 + margin, 1 + margin))
                     legend.set_loc('upper left')
-    
+
     def clear_all_legends(self):
         """清除所有 legend"""
         # 清除全局 legend
         if self.global_legend:
             self.global_legend.remove()
             self.global_legend = None
-            
+
         # 清除局部 legend
         for mortise in self.mortises:
             if mortise.axes is not None:
@@ -236,10 +236,9 @@ class LegendManager:
 class LegendPosition:
     """
     Legend 位置管理器
-    
+
     提供预定义的 legend 位置和自动计算功能
     """
-    
     # 预定义位置
     POSITIONS = {
         'top_left': (0.02, 0.98),
@@ -256,42 +255,42 @@ class LegendPosition:
         'outside_left': (-0.05, 0.5),
         'outside_right': (1.05, 0.5)
     }
-    
+
     @classmethod
     def get_position(cls, position_name: str) -> Tuple[float, float]:
         """获取预定义位置"""
         return cls.POSITIONS.get(position_name, (0.98, 0.98))
-    
+
     @classmethod
-    def calculate_optimal_position(cls, mortises: List['mortise'], 
-                                 legend_size: Tuple[float, float]) -> str:
+    def calculate_optimal_position(cls, mortises: List['mortise'],
+                                  legend_size: Tuple[float, float]) -> str:
         """
         计算最优 legend 位置
-        
+
         Args:
             mortises: mortise 列表
             legend_size: legend 大小 (width, height)
-            
+
         Returns:
             str: 最优位置名称
         """
         if not mortises:
             return 'top_right'
-            
+
         # 简单的启发式算法
         # 统计 mortise 的分布
         positions = []
         for mortise in mortises:
             if mortise.position:
                 positions.append(mortise.position)
-        
+
         if not positions:
             return 'top_right'
-            
+
         # 计算中心点
         center_x = np.mean([pos[0] + pos[2]/2 for pos in positions])
         center_y = np.mean([pos[1] + pos[3]/2 for pos in positions])
-        
+
         # 根据中心点选择位置
         if center_y > 0.7:
             return 'bottom_center'
