@@ -162,7 +162,5 @@ poetry.lock
 *.temp
 
 # update files
-RELEASE_GUIDE.md
-SETUP_SUMMARY.md
 sunmao_bioinformatics_paper.md
 Makefile

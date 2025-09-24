@@ -18,7 +18,7 @@ def main():
     """Create a basic layout example."""
     
     # Create the root panel
-    fig, root = mortise(width=2, height=2, axoff=True, cbar_pos=(.02, .8, .05, .18))
+    fig, root = mortise(figsize=(2, 2), axoff=True)
     root.ax.set_facecolor('white')
     root.ax.plot([0, 1], [0, 1], 's', color='white', markersize=10)
 
@@ -30,7 +30,7 @@ def main():
         ## 这种方式不允许，因为已经有一个 mortise 了
         print(e)
     # add_top 的size是 height, add_bottom 的size是 height, add_left 的size是 width, add_right 的size是 width
-    root.tenon(pos='bottom', size=1, pad=.1, title='title2', title_pos='bottom', axoff=True, cbar_pos=(.02, .8, .05, .18))
+    root.tenon(pos='bottom', size=1, pad=.1, title='title2', title_pos='bottom', axoff=True)
     root.tenon(pos='left', size=1, pad=.1, title='title3', title_pos='left')
     root.tenon(pos='right', size=1, pad=.1, title='title4', title_pos='right')
     

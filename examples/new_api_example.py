@@ -19,7 +19,7 @@ def main():
     """Create a basic layout example using the new API."""
     
     # Create the root mortise
-    fig, root = mortise(width=2, height=2, axoff=True, cbar_pos=(.02, .8, .05, .18))
+    fig, root = mortise(figsize=(2, 2), axoff=True)
     #root.ax.set_facecolor('black')
     root.ax.plot([0, 1], [0, 1], 'o', color='white', markersize=10)
 
@@ -34,7 +34,7 @@ def main():
         print(f"Error as expected: {e}")
     
     # Add more tenons
-    root.tenon(pos='bottom', size=1, pad=.1, title='title2', title_pos='bottom', axoff=False, cbar_pos=(.02, .8, .05, .18))
+    root.tenon(pos='bottom', size=1, pad=.1, title='title2', title_pos='bottom', axoff=False)
     root.tenon(pos='left', size=1, pad=.1, title='title3', title_pos='left', axoff=False)
     root.tenon(pos='right', size=1, pad=.1, title='title4', title_pos='right', axoff=False)
     

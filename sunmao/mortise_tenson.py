@@ -1,9 +1,22 @@
 """
-Mortise class - the main panel class for sunmao layout system.
+Mortise class - the core layout framework for sunmao.
 
-This module provides the mortise class which is the main building block for
-creating flexible subplot layouts. Each mortise can have child tenons in all
-four directions (top, bottom, left, right).
+This module provides the mortise class which serves as a layout framework
+for creating flexible subplot arrangements. The mortise-tenon system provides
+a hierarchical layout structure where each mortise can have child tenons in
+all four directions (top, bottom, left, right).
+
+Key Design Principles:
+- Sunmao is a LAYOUT FRAMEWORK, not a plotting library
+- The 'ax' property is the primary interface for third-party integration
+- Built-in plotting methods are optional examples, not requirements
+- Third-party libraries can be seamlessly integrated via ax parameter
+
+Example Integration:
+    import scanpy as sc
+    fig, root = mortise(figsize=(12, 8))
+    top_panel = root.tenon(pos='top', size=0.5)
+    sc.pl.dotplot(data, ax=top_panel.ax)  # Direct third-party integration
 """
 
 import matplotlib.pyplot as plt
@@ -14,19 +27,37 @@ import numpy as np
 
 class mortise:
     """
-    A mortise that can contain a matplotlib axes and have child tenons in all
-    directions.
+    A mortise that provides a layout framework for flexible subplot arrangements.
+    
+    This class serves as the core building block of the sunmao layout framework.
+    It provides a hierarchical layout system where each mortise can have child 
+    tenons in all four directions (top, bottom, left, right).
 
-    This class is inspired by traditional Chinese mortise-tenon joinery, where
-    mortise is the main structure and tenons are the connecting pieces.
+    Key Features:
+    - Layout management: Automatic positioning and sizing of panels
+    - Hierarchical structure: Support for nested tenon arrangements  
+    - Third-party integration: Direct access to matplotlib axes via 'ax' property
+    - Framework design: Focus on layout, not plotting functionality
 
     Attributes:
-        ax (matplotlib.axes.Axes): The matplotlib axes object for this mortise
+        ax (matplotlib.axes.Axes): The matplotlib axes object - PRIMARY INTERFACE
+        figsize (tuple): Figure size as (width, height) in inches
         tenons (dict): Dictionary containing child tenons in each direction
         parent (mortise): Parent mortise that contains this mortise
-        size (tuple): Size of the mortise as (width, height)
         position (tuple): Position of the mortise as (x, y, width, height)
         structure (str): String representation of the mortise structure
+        
+    Usage:
+        # Basic layout creation
+        fig, root = mortise(figsize=(12, 8))
+        top_panel = root.tenon(pos='top', size=0.5)
+        
+        # Third-party library integration (RECOMMENDED)
+        import scanpy as sc
+        sc.pl.dotplot(data, ax=top_panel.ax)
+        
+        # Built-in methods (OPTIONAL)
+        top_panel.plot([1,2,3], [1,2,3])
     """
     
     def __new__(cls, *args, **kwargs):
@@ -40,30 +71,24 @@ class mortise:
             return instance._fig, instance
         return instance
     
-    def __init__(self, width: float = 1.0, height: float = 1.0,
+    def __init__(self, figsize: Tuple[float, float] = (10, 8),
                  axoff: bool = False,
-                 cbar_pos: Optional[Tuple[float, float, float, float]] = None,
                  auto_render: bool = True,
-                 figsize: Tuple[float, float] = (10, 8),
                  **kwargs):
         """
         Initialize a mortise.
 
         Args:
-            width (float): Relative width of the mortise (default: 1.0)
-            height (float): Relative height of the mortise (default: 1.0)
+            figsize (tuple): Figure size for auto-render (default: (10, 8))
             axoff (bool): Whether to turn off axes display (default: False)
-            cbar_pos (tuple): Colorbar position as (x, y, width, height)
-                (default: None)
             auto_render (bool): Whether to automatically render the mortise
                 (default: True)
-            figsize (tuple): Figure size for auto-render (default: (10, 8))
             **kwargs: Additional arguments passed to matplotlib subplot creation
         """
-        self.width = width
-        self.height = height
+        # Main mortise dimensions are derived from figsize
+        self.width = figsize[0]  # Main mortise width = figsize width
+        self.height = figsize[1]  # Main mortise height = figsize height
         self.axoff = axoff
-        self.cbar_pos = cbar_pos
         self.auto_render = auto_render
         self.figsize = figsize
         self.kwargs = kwargs
@@ -101,30 +126,27 @@ class mortise:
             self._fig = self._auto_render()
     
     @classmethod
-    def create(cls, width: float = 1.0, height: float = 1.0, 
-               axoff: bool = False, cbar_pos: Optional[Tuple[float, float, float, float]] = None,
-               figsize: Tuple[float, float] = (10, 8), **kwargs):
+    def create(cls, figsize: Tuple[float, float] = (10, 8),
+               axoff: bool = False,
+               **kwargs):
         """
         Create a mortise and return both figure and mortise object.
         
         Args:
-            width (float): Relative width of the mortise (default: 1.0)
-            height (float): Relative height of the mortise (default: 1.0)
-            axoff (bool): Whether to turn off axes display (default: False)
-            cbar_pos (tuple): Colorbar position as (x, y, width, height) (default: None)
             figsize (tuple): Figure size for auto-render (default: (10, 8))
+            axoff (bool): Whether to turn off axes display (default: False)
             **kwargs: Additional arguments passed to matplotlib subplot creation
             
         Returns:
             tuple: (figure, mortise) tuple
         """
-        mortise_obj = cls(width=width, height=height, axoff=axoff, cbar_pos=cbar_pos,
-                         auto_render=True, figsize=figsize, **kwargs)
+        mortise_obj = cls(figsize=figsize, axoff=axoff,
+                         auto_render=True, **kwargs)
         return mortise_obj._fig, mortise_obj
         
     def tenon(self, pos: str, size: float = 1.0, pad: float = 0.05,
               title: Optional[str] = None, title_pos: str = 'top',
-              axoff: bool = False, cbar_pos: Optional[Tuple[float, float, float, float]] = None,
+              axoff: bool = False,
               auto_align: bool = True, **kwargs) -> 'mortise':
         """
         Add a tenon (child mortise) in the specified direction.
@@ -136,7 +158,6 @@ class mortise:
             title (str): Title for the tenon (default: None)
             title_pos (str): Position of title ('top', 'bottom', 'left', 'right') (default: 'top')
             axoff (bool): Whether to turn off axes display (default: False)
-            cbar_pos (tuple): Colorbar position as (x, y, width, height) (default: None)
             auto_align (bool): Whether to automatically align axes with parent (default: True)
             **kwargs: Additional arguments for tenon creation
             
@@ -146,20 +167,29 @@ class mortise:
         if pos not in ['top', 'bottom', 'left', 'right']:
             raise ValueError("pos must be one of 'top', 'bottom', 'left', 'right'")
             
-        # Check if this position already has tenons
-        if self.tenons[pos]:
+        # Smart tenon addition: for root mortise, automatically add to the outermost tenon
+        if self.tenons[pos] and self.parent is None:
+            # This is a root mortise with existing tenons in this direction
+            # Find the outermost tenon and add to it
+            outermost_tenon = self._find_outermost_tenon(pos)
+            return outermost_tenon.tenon(pos, size, pad, title, title_pos, 
+                                       axoff, auto_align, **kwargs)
+        elif self.tenons[pos]:
+            # This is a non-root mortise with existing tenons - raise error
             raise ValueError(f"Position '{pos}' already has tenons. Use get_tenon() to access existing tenons.")
             
-        # Create new tenon
+        # Calculate tenon dimensions based on parent's figsize and position
         if pos in ['top', 'bottom']:
-            tenon_width = self.width
-            tenon_height = size
+            # For top/bottom tenons, size controls height relative to parent height
+            tenon_width = self.width  # Same width as parent
+            tenon_height = self.height * size  # Height = parent_height * size
         else:  # left, right
-            tenon_width = size
-            tenon_height = self.height
+            # For left/right tenons, size controls width relative to parent width
+            tenon_width = self.width * size  # Width = parent_width * size
+            tenon_height = self.height  # Same height as parent
             
-        new_tenon = mortise(width=tenon_width, height=tenon_height, 
-                           axoff=axoff, cbar_pos=cbar_pos, auto_render=False, **kwargs)
+        new_tenon = mortise(figsize=(tenon_width, tenon_height), 
+                           axoff=axoff, auto_render=False, **kwargs)
         new_tenon.parent = self
         new_tenon.title = title
         new_tenon.title_pos = title_pos
@@ -168,14 +198,186 @@ class mortise:
         # Add to tenons list
         self.tenons[pos].append(new_tenon)
         
-        # Auto-align axes if requested and parent has axes
-        if auto_align and self.axes is not None:
-            # Ensure the new tenon is rendered first
-            self._ensure_rendered()
-            if new_tenon.axes is not None:
-                self._auto_align_new_tenon(new_tenon, pos)
+        # Ensure the new tenon is rendered if parent is already rendered
+        if self.axes is not None:
+            # Re-render the entire layout to include the new tenon
+            root = self.get_root()
+            if root._fig is not None:
+                # Save current styles before clearing
+                root._save_styles()
+                root._fig.clear()
+                root.render(root._fig, 0.1, 0.1, 0.8, 0.8)
+                # Restore styles after rendering
+                root._restore_styles()
+                # Auto-align axes if requested
+                if auto_align and new_tenon.axes is not None:
+                    self._auto_align_new_tenon(new_tenon, pos)
         
         return new_tenon
+        
+    def _find_outermost_tenon(self, pos: str) -> 'mortise':
+        """
+        Find the outermost tenon in the specified direction.
+        
+        For root mortise, this finds the tenon that is furthest from the root
+        in the specified direction, allowing for smart tenon addition.
+        
+        Args:
+            pos (str): Position to search ('top', 'bottom', 'left', 'right')
+            
+        Returns:
+            mortise: The outermost tenon in the specified direction
+        """
+        if not self.tenons[pos]:
+            return self
+            
+        # Get the first tenon in this direction
+        current_tenon = self.tenons[pos][0]
+        
+        # Recursively find the outermost tenon
+        while current_tenon.tenons[pos]:
+            current_tenon = current_tenon.tenons[pos][0]
+            
+        return current_tenon
+        
+    def _save_styles(self):
+        """Save current styles of all mortises before re-rendering."""
+        self._saved_styles = {}
+        self._collect_styles(self)
+        
+    def _collect_styles(self, mortise_obj):
+        """Recursively collect styles from all mortises."""
+        if mortise_obj.axes is not None:
+            # Save important style properties (only those that exist)
+            styles = {}
+            
+            # Basic properties
+            try:
+                styles['facecolor'] = mortise_obj.axes.get_facecolor()
+            except:
+                pass
+                
+            try:
+                styles['title'] = mortise_obj.axes.get_title()
+            except:
+                pass
+                
+            try:
+                styles['xlabel'] = mortise_obj.axes.get_xlabel()
+            except:
+                pass
+                
+            try:
+                styles['ylabel'] = mortise_obj.axes.get_ylabel()
+            except:
+                pass
+                
+            try:
+                styles['xlim'] = mortise_obj.axes.get_xlim()
+            except:
+                pass
+                
+            try:
+                styles['ylim'] = mortise_obj.axes.get_ylim()
+            except:
+                pass
+                
+            try:
+                styles['xticks'] = mortise_obj.axes.get_xticks()
+            except:
+                pass
+                
+            try:
+                styles['yticks'] = mortise_obj.axes.get_yticks()
+            except:
+                pass
+                
+            try:
+                styles['grid'] = mortise_obj.axes.get_grid()
+            except:
+                pass
+                
+            try:
+                styles['legend'] = mortise_obj.axes.get_legend()
+            except:
+                pass
+            
+            self._saved_styles[id(mortise_obj)] = styles
+        
+        # Recursively collect from all tenons
+        for pos in ['top', 'bottom', 'left', 'right']:
+            for tenon in mortise_obj.tenons[pos]:
+                self._collect_styles(tenon)
+                
+    def _restore_styles(self):
+        """Restore saved styles after re-rendering."""
+        if hasattr(self, '_saved_styles'):
+            self._apply_styles(self, self._saved_styles)
+            
+    def _apply_styles(self, mortise_obj, saved_styles):
+        """Recursively apply saved styles to all mortises."""
+        if mortise_obj.axes is not None and id(mortise_obj) in saved_styles:
+            styles = saved_styles[id(mortise_obj)]
+            
+            # Restore style properties (only those that were saved)
+            try:
+                if 'facecolor' in styles:
+                    mortise_obj.axes.set_facecolor(styles['facecolor'])
+            except:
+                pass
+                
+            try:
+                if 'title' in styles and styles['title']:
+                    mortise_obj.axes.set_title(styles['title'])
+            except:
+                pass
+                
+            try:
+                if 'xlabel' in styles and styles['xlabel']:
+                    mortise_obj.axes.set_xlabel(styles['xlabel'])
+            except:
+                pass
+                
+            try:
+                if 'ylabel' in styles and styles['ylabel']:
+                    mortise_obj.axes.set_ylabel(styles['ylabel'])
+            except:
+                pass
+                
+            try:
+                if 'xlim' in styles:
+                    mortise_obj.axes.set_xlim(styles['xlim'])
+            except:
+                pass
+                
+            try:
+                if 'ylim' in styles:
+                    mortise_obj.axes.set_ylim(styles['ylim'])
+            except:
+                pass
+                
+            try:
+                if 'xticks' in styles:
+                    mortise_obj.axes.set_xticks(styles['xticks'])
+            except:
+                pass
+                
+            try:
+                if 'yticks' in styles:
+                    mortise_obj.axes.set_yticks(styles['yticks'])
+            except:
+                pass
+                
+            try:
+                if 'grid' in styles and styles['grid']:
+                    mortise_obj.axes.grid(True)
+            except:
+                pass
+        
+        # Recursively apply to all tenons
+        for pos in ['top', 'bottom', 'left', 'right']:
+            for tenon in mortise_obj.tenons[pos]:
+                self._apply_styles(tenon, saved_styles)
         
     def _auto_align_new_tenon(self, new_tenon: 'mortise', pos: str):
         """
@@ -266,29 +468,29 @@ class mortise:
         Returns:
             tuple: (total_width, total_height, offset_x, offset_y)
         """
-        # Start with this mortise's size
+        # Start with this mortise's size (now absolute dimensions from figsize)
         total_width = self.width
         total_height = self.height
         
-        # Add space for left and right tenons
+        # Add space for left and right tenons (now absolute widths)
         left_width = 0
         right_width = 0
         if self.tenons['left']:
             for tenon in self.tenons['left']:
-                left_width += tenon.calculate_layout()[0]
+                left_width += tenon.width  # tenon.width is now absolute
         if self.tenons['right']:
             for tenon in self.tenons['right']:
-                right_width += tenon.calculate_layout()[0]
+                right_width += tenon.width  # tenon.width is now absolute
                 
-        # Add space for top and bottom tenons
+        # Add space for top and bottom tenons (now absolute heights)
         top_height = 0
         bottom_height = 0
         if self.tenons['top']:
             for tenon in self.tenons['top']:
-                top_height += tenon.calculate_layout()[1]
+                top_height += tenon.height  # tenon.height is now absolute
         if self.tenons['bottom']:
             for tenon in self.tenons['bottom']:
-                bottom_height += tenon.calculate_layout()[1]
+                bottom_height += tenon.height  # tenon.height is now absolute
                 
         total_width += left_width + right_width
         total_height += top_height + bottom_height
@@ -313,9 +515,10 @@ class mortise:
             height (float): Height of this mortise (0-1)
             **kwargs: Additional arguments for subplot creation
         """
-        # Calculate layout for all tenons
+        # Calculate layout for all tenons (now in absolute dimensions)
         total_width, total_height, offset_x, offset_y = self.calculate_layout()
         
+        # Convert absolute dimensions to relative positions within the figure
         # Position of this mortise within the total layout
         mortise_x = x + (offset_x / total_width) * width
         mortise_y = y + (offset_y / total_height) * height
@@ -324,7 +527,10 @@ class mortise:
         
         # Create axes for this mortise
         rect = [mortise_x, mortise_y, mortise_width, mortise_height]
-        self.axes = figure.add_axes(rect, **{**self.kwargs, **kwargs})
+        # Filter out sunmao-specific parameters before passing to matplotlib
+        matplotlib_kwargs = {k: v for k, v in self.kwargs.items() 
+                           if k not in ['legend_pos', 'cbar_pos']}
+        self.axes = figure.add_axes(rect, **{**matplotlib_kwargs, **kwargs})
         self._ax = self.axes  # Set the ax property
         self._figure = figure
         self.position = rect
@@ -353,10 +559,8 @@ class mortise:
                 self.axes.text(1.1, 0.5, self.title, transform=self.axes.transAxes, 
                              ha='left', va='center', rotation=90)
         
-        # Add colorbar if specified
-        if self.cbar_pos:
-            # This would need to be implemented based on the plot content
-            pass
+        # Legend management is handled by LegendManager system
+        # Use create_legend() method for legend management
             
         # Render tenons
         self._render_tenons(figure, x, y, width, height, total_width, total_height, offset_x, offset_y)
@@ -370,10 +574,11 @@ class mortise:
         if self.tenons['left']:
             current_x = x
             for tenon in self.tenons['left']:
-                tenon_width = tenon.calculate_layout()[0]
-                tenon_height = tenon.calculate_layout()[1]
+                # tenon dimensions are now absolute
+                tenon_width = tenon.width
+                tenon_height = tenon.height
                 tenon_x = current_x
-                tenon_y = y + ((offset_y - tenon.calculate_layout()[2]) / total_height) * height
+                tenon_y = y + (offset_y / total_height) * height
                 tenon_panel_width = (tenon_width / total_width) * width
                 tenon_panel_height = (tenon_height / total_height) * height
                 tenon.render(figure, tenon_x, tenon_y, tenon_panel_width, tenon_panel_height)
@@ -383,10 +588,11 @@ class mortise:
         if self.tenons['right']:
             current_x = x + ((offset_x + self.width) / total_width) * width
             for tenon in self.tenons['right']:
-                tenon_width = tenon.calculate_layout()[0]
-                tenon_height = tenon.calculate_layout()[1]
+                # tenon dimensions are now absolute
+                tenon_width = tenon.width
+                tenon_height = tenon.height
                 tenon_x = current_x
-                tenon_y = y + ((offset_y - tenon.calculate_layout()[2]) / total_height) * height
+                tenon_y = y + (offset_y / total_height) * height
                 tenon_panel_width = (tenon_width / total_width) * width
                 tenon_panel_height = (tenon_height / total_height) * height
                 tenon.render(figure, tenon_x, tenon_y, tenon_panel_width, tenon_panel_height)
@@ -396,9 +602,10 @@ class mortise:
         if self.tenons['top']:
             current_y = y + ((offset_y + self.height) / total_height) * height
             for tenon in self.tenons['top']:
-                tenon_width = tenon.calculate_layout()[0]
-                tenon_height = tenon.calculate_layout()[1]
-                tenon_x = x + ((offset_x - tenon.calculate_layout()[2]) / total_width) * width
+                # tenon dimensions are now absolute
+                tenon_width = tenon.width
+                tenon_height = tenon.height
+                tenon_x = x + (offset_x / total_width) * width
                 tenon_y = current_y
                 tenon_panel_width = (tenon_width / total_width) * width
                 tenon_panel_height = (tenon_height / total_height) * height
@@ -409,9 +616,10 @@ class mortise:
         if self.tenons['bottom']:
             current_y = y
             for tenon in self.tenons['bottom']:
-                tenon_width = tenon.calculate_layout()[0]
-                tenon_height = tenon.calculate_layout()[1]
-                tenon_x = x + ((offset_x - tenon.calculate_layout()[2]) / total_width) * width
+                # tenon dimensions are now absolute
+                tenon_width = tenon.width
+                tenon_height = tenon.height
+                tenon_x = x + (offset_x / total_width) * width
                 tenon_y = current_y
                 tenon_panel_width = (tenon_width / total_width) * width
                 tenon_panel_height = (tenon_height / total_height) * height
@@ -433,7 +641,7 @@ class mortise:
     def _build_structure(self, level: int = 0) -> str:
         """Build the structure string representation."""
         indent = "  " * level
-        result = f"{indent}mortise(width={self.width}, height={self.height})"
+        result = f"{indent}mortise(figsize=({self.width}, {self.height}))"
         
         for pos in ['top', 'bottom', 'left', 'right']:
             if self.tenons[pos]:
@@ -445,56 +653,98 @@ class mortise:
         
     @property
     def ax(self):
-        """Get the matplotlib axes object."""
+        """
+        Get the matplotlib axes object - PRIMARY INTERFACE for third-party integration.
+        
+        This is the main interface for integrating with third-party plotting libraries.
+        It automatically ensures the mortise is rendered before returning the axes.
+        
+        Returns:
+            matplotlib.axes.Axes: The matplotlib axes object
+            
+        Usage:
+            # Third-party library integration (RECOMMENDED)
+            import scanpy as sc
+            sc.pl.dotplot(data, ax=mortise_obj.ax)
+            
+            import seaborn as sns
+            sns.heatmap(data, ax=mortise_obj.ax)
+            
+            # Direct matplotlib usage
+            mortise_obj.ax.plot([1,2,3], [1,2,3])
+            mortise_obj.ax.set_title('My Plot')
+        """
+        self._ensure_rendered()
         return self._ax
         
     def plot(self, *args, **kwargs):
         """
-        Plot data on this mortise's axes.
+        Plot data on this mortise's axes - OPTIONAL EXAMPLE METHOD.
+        
+        This is a convenience method that provides basic matplotlib plotting.
+        For advanced plotting, use third-party libraries with mortise_obj.ax.
         
         Args:
             *args: Arguments passed to matplotlib plot function
             **kwargs: Keyword arguments passed to matplotlib plot function
+            
+        Returns:
+            matplotlib plot result
+            
+        Note:
+            This method is provided as an example. For production use,
+            consider using specialized plotting libraries:
+            
+            # Recommended approach
+            import scanpy as sc
+            sc.pl.dotplot(data, ax=self.ax)
+            
+            # Or direct matplotlib
+            self.ax.plot(*args, **kwargs)
         """
-        self._ensure_rendered()
-        return self.axes.plot(*args, **kwargs)
+        return self.ax.plot(*args, **kwargs)
         
     def scatter(self, *args, **kwargs):
         """
-        Create a scatter plot on this mortise's axes.
+        Create a scatter plot - OPTIONAL EXAMPLE METHOD.
+        
+        For advanced scatter plots, use third-party libraries with mortise_obj.ax.
         
         Args:
             *args: Arguments passed to matplotlib scatter function
             **kwargs: Keyword arguments passed to matplotlib scatter function
+            
+        Returns:
+            matplotlib scatter result
         """
-        self._ensure_rendered()
-        return self.axes.scatter(*args, **kwargs)
+        return self.ax.scatter(*args, **kwargs)
         
     def imshow(self, *args, **kwargs):
         """
-        Display an image on this mortise's axes.
+        Display an image - OPTIONAL EXAMPLE METHOD.
+        
+        For advanced image visualization, use third-party libraries with mortise_obj.ax.
         
         Args:
             *args: Arguments passed to matplotlib imshow function
             **kwargs: Keyword arguments passed to matplotlib imshow function
+            
+        Returns:
+            matplotlib imshow result
         """
-        self._ensure_rendered()
-        return self.axes.imshow(*args, **kwargs)
+        return self.ax.imshow(*args, **kwargs)
         
     def set_xlabel(self, label: str, **kwargs):
         """Set the x-axis label."""
-        self._ensure_rendered()
-        self.axes.set_xlabel(label, **kwargs)
+        self.ax.set_xlabel(label, **kwargs)
         
     def set_ylabel(self, label: str, **kwargs):
         """Set the y-axis label."""
-        self._ensure_rendered()
-        self.axes.set_ylabel(label, **kwargs)
+        self.ax.set_ylabel(label, **kwargs)
         
     def set_title(self, title: str, **kwargs):
         """Set the title of the mortise."""
-        self._ensure_rendered()
-        self.axes.set_title(title, **kwargs)
+        self.ax.set_title(title, **kwargs)
         
     def align_axes(self, direction: str = 'both', mortises: List['mortise'] = None):
         """
@@ -504,8 +754,6 @@ class mortise:
             direction (str): Direction to align ('x', 'y', or 'both') (default: 'both')
             mortises (list): List of mortises to align with (default: all adjacent tenons)
         """
-        self._ensure_rendered()
-        
         if mortises is None:
             # Get all adjacent tenons
             mortises = []
@@ -518,17 +766,17 @@ class mortise:
         
         # Get current limits
         if direction in ['x', 'both']:
-            x_lim = self.axes.get_xlim()
+            x_lim = self.ax.get_xlim()
         if direction in ['y', 'both']:
-            y_lim = self.axes.get_ylim()
+            y_lim = self.ax.get_ylim()
         
         # Set the same limits for all mortises
         for mortise in mortises:
             if mortise.axes is not None:
                 if direction in ['x', 'both']:
-                    mortise.axes.set_xlim(x_lim)
+                    mortise.ax.set_xlim(x_lim)
                 if direction in ['y', 'both']:
-                    mortise.axes.set_ylim(y_lim)
+                    mortise.ax.set_ylim(y_lim)
     
     def share_axes(self, direction: str, mortises: List['mortise'] = None):
         """
@@ -538,8 +786,6 @@ class mortise:
             direction (str): Direction to share ('x' or 'y')
             mortises (list): List of mortises to share with
         """
-        self._ensure_rendered()
-        
         if mortises is None:
             mortises = []
             if direction == 'x':
@@ -553,9 +799,9 @@ class mortise:
         for mortise in mortises:
             if mortise.axes is not None:
                 if direction == 'x':
-                    mortise.axes.sharex(self.axes)
+                    mortise.ax.sharex(self.ax)
                 else:
-                    mortise.axes.sharey(self.axes)
+                    mortise.ax.sharey(self.ax)
     
     def get_legend_manager(self) -> 'LegendManager':
         """
@@ -602,9 +848,12 @@ class mortise:
         elif mode == 'local':
             return legend_manager.create_local_legends(**kwargs)
         elif mode == 'mixed':
+            # Filter out conflicting parameters
+            filtered_kwargs = {k: v for k, v in kwargs.items() 
+                             if k not in ['global_position', 'global_ncol']}
             return legend_manager.create_mixed_legends(
                 global_position=position or 'upper center',
-                global_ncol=ncol, **kwargs)
+                global_ncol=ncol, **filtered_kwargs)
         elif mode == 'auto':
             return legend_manager.auto_layout_legends(mode='auto', **kwargs)
         else:
@@ -798,7 +1047,7 @@ class LegendManager:
             tuple: (全局 legend, 局部 legend 字典)
         """
         # 创建全局 legend
-        global_legend = self.create_global_legend(global_position, global_ncol,
+        global_legend = self.create_global_legend(position=global_position, ncol=global_ncol,
                                                  **kwargs)
 
         # 创建局部 legend

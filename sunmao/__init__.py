@@ -15,5 +15,5 @@ Main classes:
 
 from .mortise_tenson import mortise, LegendManager, LegendPosition
 
-__version__ = "0.3.2"
+__version__ = "0.4.0"
 __all__ = ["mortise", "LegendManager", "LegendPosition"]
