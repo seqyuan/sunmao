@@ -9,11 +9,12 @@ fully customized.
 
 Main classes:
 - mortise: The main building block for creating layouts
+- whiteLayer: Global management layer for unified configuration
 - LegendManager: Unified legend management system
 - LegendPosition: Legend position management utilities
 """
 
-from .mortise_tenson import mortise, LegendManager, LegendPosition
+from .mortise_tenson import mortise, whiteLayer, create_whiteLayer, LegendManager, LegendPosition
 
-__version__ = "0.4.0"
-__all__ = ["mortise", "LegendManager", "LegendPosition"]
+__version__ = "0.5.1"
+__all__ = ["mortise", "whiteLayer", "create_whiteLayer", "LegendManager", "LegendPosition"]

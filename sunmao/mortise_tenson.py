@@ -121,6 +121,9 @@ class mortise:
         # Legend management
         self._legend_manager = None
         
+        # WhiteLayer reference
+        self.white_layer = None
+        
         # Auto-render if this is a root mortise
         if auto_render and self.parent is None:
             self._fig = self._auto_render()
@@ -198,15 +201,19 @@ class mortise:
         # Add to tenons list
         self.tenons[pos].append(new_tenon)
         
+        # Auto-register to whiteLayer if available
+        if hasattr(self, 'white_layer') and self.white_layer is not None:
+            self.white_layer.register_panel(new_tenon)
+        
         # Ensure the new tenon is rendered if parent is already rendered
         if self.axes is not None:
             # Re-render the entire layout to include the new tenon
             root = self.get_root()
-            if root._fig is not None:
+            if root._figure is not None:
                 # Save current styles before clearing
                 root._save_styles()
-                root._fig.clear()
-                root.render(root._fig, 0.1, 0.1, 0.8, 0.8)
+                root._figure.clear()
+                root.render(root._figure, 0.1, 0.1, 0.8, 0.8)
                 # Restore styles after rendering
                 root._restore_styles()
                 # Auto-align axes if requested
@@ -902,6 +909,10 @@ class mortise:
         Delegate attribute access to the matplotlib axes object.
         This allows direct access to all matplotlib axes methods.
         """
+        # Don't delegate private attributes or attributes that exist on mortise
+        if name.startswith('_') or hasattr(self.__class__, name):
+            raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
+        
         if self.axes is not None:
             return getattr(self.axes, name)
         raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
@@ -1198,3 +1209,359 @@ class LegendPosition:
             return 'outside_right'
         else:
             return 'outside_top'
+
+
+class whiteLayer:
+    """
+    WhiteLayer - 全局管理层
+    
+    统一管理所有面板和全局配置，包括：
+    - 面板生命周期管理
+    - 全局 legend 管理
+    - 全局布局配置
+    - 统一的配置接口
+    """
+    
+    def __init__(self, figsize: Tuple[float, float] = (10, 8)):
+        """
+        初始化 WhiteLayer
+        
+        Args:
+            figsize: 图形尺寸
+        """
+        self.figure = plt.figure(figsize=figsize)
+        self.mortise = mortise(figure=self.figure, auto_render=False)
+        self.mortise.white_layer = self  # 设置反向引用
+        
+        # 面板和 legend 管理
+        self.panels = []  # 所有面板列表
+        self.legends = []  # 独立的 legend 对象列表
+        
+        # 配置管理
+        self.legend_config = {
+            'location': 'upper_center',
+            'orientation': 'horizontal',
+            'ncol': None,
+            'nrow': None,
+            'legend_hpad': 0.01,  # 控制 heatmap 和 legend 之间的水平间距
+            'legend_vpad': 0.01,  # 控制 legend 顶部与 anchor 之间的垂直间距
+            'legend_gap': 0.03,   # 控制不同 legend 之间的间距
+            'frameon': True,      # 控制 legend 边框显示
+            'fancybox': True,    # 控制 legend 边框样式
+            'shadow': False,     # 控制 legend 阴影
+            'edgecolor': 'black', # legend 边框颜色
+            'facecolor': 'white'  # legend 背景颜色
+        }
+        self.layout_config = {}
+        self.global_legend = None
+        
+        # 自动渲染
+        self.mortise.render(self.figure, 0.1, 0.1, 0.8, 0.8)
+    
+    def register_panel(self, panel: 'mortise'):
+        """
+        注册面板到 whiteLayer
+        
+        Args:
+            panel: 要注册的面板
+        """
+        self.panels.append(panel)
+        panel.white_layer = self  # 设置反向引用
+        
+        # 不在这里收集 legend，等绘制数据后再收集
+    
+    def show_legends(self, panel_indices: List[int]):
+        """
+        为选中的面板创建独立的 legend
+        
+        Args:
+            panel_indices: 面板索引列表，如 [0, 3, 2]
+        """
+        # 清除现有的 legend
+        self.hide_legends()
+        
+        # 为每个选中的面板创建独立的 legend
+        for idx in panel_indices:
+            if idx < len(self.panels):
+                panel = self.panels[idx]
+                if panel.axes is not None:
+                    handles, labels = panel.axes.get_legend_handles_labels()
+                    if handles and labels:
+                        # 创建独立的 legend，使用配置的边框参数
+                        # 参考 PyComplexHeatmap 的实现：使用 ax.figure.transFigure
+                        legend = self.figure.legend(
+                            handles, labels,
+                            loc='upper left',
+                            bbox_to_anchor=(1.02, 1.0),  # 默认位置
+                            bbox_transform=self.figure.transFigure,  # 与 PyComplexHeatmap 保持一致
+                            frameon=self.legend_config['frameon'],
+                            fancybox=self.legend_config['fancybox'],
+                            shadow=self.legend_config['shadow'],
+                            edgecolor=self.legend_config['edgecolor'],
+                            facecolor=self.legend_config['facecolor']
+                        )
+                        self.legends.append(legend)
+        
+        # 应用位置配置
+        self._apply_legend_positions()
+    
+    def set_legend_pos(self, loc: str, orientation: str, ncol: int = None, nrow: int = None, 
+                      legend_hpad: float = None, legend_vpad: float = None, legend_gap: float = None,
+                      frameon: bool = None, fancybox: bool = None, shadow: bool = None,
+                      edgecolor: str = None, facecolor: str = None):
+        """
+        设置所有 legend 的位置和布局，参考 PyComplexHeatmap 的设计
+        
+        Args:
+            loc: 位置 ('right', 'bottom', 'top', 'left')
+            orientation: 方向 ('vertical', 'horizontal')
+            ncol: 子图 legend 的列数（以子图 legend 为单位）
+            nrow: 子图 legend 的行数（以子图 legend 为单位）
+            legend_hpad: 控制 heatmap 和 legend 之间的水平间距
+            legend_vpad: 控制 legend 顶部与 anchor 之间的垂直间距
+            legend_gap: 控制不同 legend 之间的间距
+            frameon: 控制 legend 边框显示
+            fancybox: 控制 legend 边框样式
+            shadow: 控制 legend 阴影
+            edgecolor: legend 边框颜色
+            facecolor: legend 背景颜色
+        """
+        config_update = {
+            'location': loc,
+            'orientation': orientation,
+            'ncol': ncol,
+            'nrow': nrow
+        }
+        
+        # 更新间距参数（如果提供）
+        if legend_hpad is not None:
+            config_update['legend_hpad'] = legend_hpad
+        if legend_vpad is not None:
+            config_update['legend_vpad'] = legend_vpad
+        if legend_gap is not None:
+            config_update['legend_gap'] = legend_gap
+            
+        # 更新边框参数（如果提供）
+        if frameon is not None:
+            config_update['frameon'] = frameon
+        if fancybox is not None:
+            config_update['fancybox'] = fancybox
+        if shadow is not None:
+            config_update['shadow'] = shadow
+        if edgecolor is not None:
+            config_update['edgecolor'] = edgecolor
+        if facecolor is not None:
+            config_update['facecolor'] = facecolor
+            
+        self.legend_config.update(config_update)
+        
+        # 应用位置配置
+        self._apply_legend_positions()
+    
+    def _apply_legend_positions(self):
+        """
+        应用 legend 位置配置
+        """
+        if not self.legends:
+            return
+        
+        location = self.legend_config['location']
+        orientation = self.legend_config['orientation']
+        ncol = self.legend_config['ncol']
+        nrow = self.legend_config['nrow']
+        
+        # 计算每个 legend 的位置
+        positions = self._calculate_legend_positions(len(self.legends), location, orientation, ncol, nrow)
+        
+        # 设置每个 legend 的位置，使用 Figure 坐标系，与 PyComplexHeatmap 保持一致
+        for i, legend in enumerate(self.legends):
+            if i < len(positions):
+                loc, bbox_to_anchor = positions[i]
+                legend.set_loc(loc)
+                legend.set_bbox_to_anchor(bbox_to_anchor, transform=self.figure.transFigure)
+    
+    def _calculate_legend_positions(self, num_legends: int, location: str, orientation: str, ncol: int = None, nrow: int = None):
+        """
+        计算每个 legend 的位置，参考 PyComplexHeatmap 的精确控制方法
+        
+        Args:
+            num_legends: legend 数量
+            location: 位置
+            orientation: 方向
+            ncol: 列数（以子图 legend 为单位）
+            nrow: 行数（以子图 legend 为单位）
+            
+        Returns:
+            List[tuple]: [(loc, bbox_to_anchor), ...]
+        """
+        positions = []
+        
+        # 获取间距参数
+        legend_hpad = self.legend_config['legend_hpad']
+        legend_vpad = self.legend_config['legend_vpad']
+        legend_gap = self.legend_config['legend_gap']
+        
+        # 计算布局
+        if ncol is None and nrow is None:
+            # 默认布局
+            if orientation == 'vertical':
+                ncol = 1
+                nrow = num_legends
+            else:  # horizontal
+                ncol = num_legends
+                nrow = 1
+        elif ncol is not None:
+            nrow = max(1, (num_legends + ncol - 1) // ncol)
+        elif nrow is not None:
+            ncol = max(1, (num_legends + nrow - 1) // nrow)
+        
+        # 计算每个 legend 的位置
+        for i in range(num_legends):
+            row = i // ncol
+            col = i % ncol
+            
+            # 根据位置和方向计算坐标，参考 PyComplexHeatmap 的 Figure 坐标系实现
+            if location == 'right':
+                if orientation == 'vertical':
+                    # 垂直排列，参考 PyComplexHeatmap 的紧凑布局
+                    x = 0.9 + legend_hpad + col * (legend_gap + 0.08)  # 更靠近边缘，参考 PyComplexHeatmap
+                    y = 0.9 - legend_vpad - row * (legend_gap + 0.08)  # 紧凑行间距
+                else:  # horizontal
+                    # 水平排列，从左到右
+                    x = 0.9 + legend_hpad + col * (legend_gap + 0.10)  # 更靠近边缘
+                    y = 0.9 - legend_vpad - row * (legend_gap + 0.12)  # 紧凑行间距
+            elif location == 'left':
+                if orientation == 'vertical':
+                    x = -0.01 - legend_hpad - col * (legend_gap + 0.08)  # 更靠近边缘
+                    y = 0.98 - legend_vpad - row * (legend_gap + 0.08)  # 紧凑行间距
+                else:  # horizontal
+                    x = -0.01 - legend_hpad - col * (legend_gap + 0.10)  # 更靠近边缘
+                    y = 0.98 - legend_vpad - row * (legend_gap + 0.12)  # 紧凑行间距
+            elif location == 'top':
+                if orientation == 'horizontal':
+                    x = 0.3 + (col - ncol/2 + 0.5) * (legend_gap + 0.10)  # 紧凑列间距
+                    y = 1 + legend_vpad + row * (legend_gap + 0.08)   # 更靠近边缘
+                else:  # vertical
+                    x = 0.3 + (col - ncol/2 + 0.5) * (legend_gap + 0.08) # 紧凑列间距
+                    y = 1.01 + legend_vpad + row * (legend_gap + 0.08)   # 更靠近边缘
+            elif location == 'bottom':
+                if orientation == 'horizontal':
+                    x = 0.3 + (col - ncol/2 + 0.5) * (legend_gap + 0.10)  # 紧凑列间距
+                    y = 0.05 - legend_vpad - row * (legend_gap + 0.08)   # 更靠近边缘
+                else:  # vertical
+                    x = 0.3 + (col - ncol/2 + 0.5) * (legend_gap + 0.08) # 紧凑列间距
+                    y = -0.05 - legend_vpad - row * (legend_gap + 0.08)   # 更靠近边缘
+            else:
+                # 默认位置，参考 PyComplexHeatmap
+                x = 1.0 + legend_hpad + col * (legend_gap + 0.08)
+                y = 0.98 - legend_vpad - row * (legend_gap + 0.08)
+            
+            positions.append(('upper left', (x, y)))
+        
+        return positions
+    
+    def show_all_legends(self):
+        """
+        显示所有面板的 legend
+        """
+        all_indices = list(range(len(self.panels)))
+        self.show_legends(all_indices)
+    
+    def hide_legends(self):
+        """
+        隐藏所有 legend
+        """
+        for legend in self.legends:
+            legend.remove()
+        self.legends = []
+    
+    def set_legend_frame(self, frameon: bool = True, fancybox: bool = True, shadow: bool = False,
+                        edgecolor: str = 'black', facecolor: str = 'white'):
+        """
+        一键设置所有 legend 的边框样式
+        
+        Args:
+            frameon: 是否显示边框
+            fancybox: 是否使用圆角边框
+            shadow: 是否显示阴影
+            edgecolor: 边框颜色
+            facecolor: 背景颜色
+        """
+        self.legend_config.update({
+            'frameon': frameon,
+            'fancybox': fancybox,
+            'shadow': shadow,
+            'edgecolor': edgecolor,
+            'facecolor': facecolor
+        })
+        
+        # 更新现有 legend 的边框样式
+        for legend in self.legends:
+            legend.set_frame_on(frameon)
+            if frameon:  # 只有在显示边框时才设置样式
+                legend.get_frame().set_boxstyle('round' if fancybox else 'square')
+                legend.get_frame().set_edgecolor(edgecolor)
+                legend.get_frame().set_facecolor(facecolor)
+    
+    def get_panel_count(self) -> int:
+        """
+        获取面板数量
+        
+        Returns:
+            int: 面板数量
+        """
+        return len(self.panels)
+    
+    def get_legend_count(self) -> int:
+        """
+        获取 legend 数量
+        
+        Returns:
+            int: legend 数量
+        """
+        return len(self.legends)
+    
+    def __getitem__(self, index: int):
+        """
+        支持独立访问 legend
+        
+        Args:
+            index: legend 索引
+            
+        Returns:
+            matplotlib.legend.Legend: 独立的 legend 对象
+        """
+        if 0 <= index < len(self.legends):
+            return self.legends[index]
+        else:
+            raise IndexError(f"Legend index {index} out of range")
+    
+    def savefig(self, filename: str, **kwargs):
+        """
+        保存图形
+        
+        Args:
+            filename: 文件名
+            **kwargs: 其他保存参数
+        """
+        self.figure.savefig(filename, **kwargs)
+    
+    def show(self):
+        """
+        显示图形
+        """
+        plt.show()
+
+
+def create_whiteLayer(figsize: Tuple[float, float] = (10, 8)) -> Tuple[plt.Figure, 'whiteLayer']:
+    """
+    创建 whiteLayer 实例
+    
+    Args:
+        figsize: 图形尺寸
+        
+    Returns:
+        Tuple[plt.Figure, whiteLayer]: figure 和 whiteLayer 实例
+    """
+    wl = whiteLayer(figsize)
+    return wl.figure, wl
